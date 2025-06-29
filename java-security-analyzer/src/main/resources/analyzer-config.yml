@@ -1,0 +1,11 @@
+rules:
+  SEC_SQL_INJECTION:
+    enabled: true
+  SEC_HARDCODED_SECRET:
+    enabled: true
+  SEC_WEAK_CRYPTO:
+    enabled: true
+  SEC_INSECURE_RANDOM:
+    enabled: true
+  SEC_INSECURE_DESERIALIZATION:
+    enabled: true
