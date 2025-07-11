@@ -9,92 +9,86 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.File;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
-import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.*;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.stereotype.Component;
 
 
 @SpringBootApplication
-public class JavaSecurityAnalyzerApplication {
+public class JavaSecurityAnalyzerApplication implements ApplicationRunner {
+
+    private final SourceScanner scanner;
+    private final List<SecurityRule> rules;
+    private final FindingCollector collector;
+    private final ReportGenerator reportGen;
+    private final ObjectMapper yaml = new ObjectMapper(new YAMLFactory());
+
+    public JavaSecurityAnalyzerApplication(
+            SourceScanner scanner,
+            List<SecurityRule> rules,
+            FindingCollector collector,
+            ReportGenerator reportGen
+    ) {
+        this.scanner   = scanner;
+        this.rules     = rules;
+        this.collector = collector;
+        this.reportGen = reportGen;
+    }
 
     public static void main(String[] args) {
         new SpringApplicationBuilder(JavaSecurityAnalyzerApplication.class)
-            .web(WebApplicationType.NONE)
-            .run(args);
+                .web(WebApplicationType.NONE)
+                .run(args);
     }
 
-    @Component
-    static class Runner implements CommandLineRunner {
-        private final SourceScanner sourceScanner;
-        private final List<SecurityRule> securityRules;
-        private final FindingCollector collector;
-        private final ReportGenerator reportGenerator;
+    @Override
+    public void run(ApplicationArguments args) throws Exception {
+        String src   = firstOption(args, "source",  args.getNonOptionArgs(), "musisz podać --source");
+        String report= firstOption(args, "report", args.getNonOptionArgs(), null, "security-report.html");
 
-        public Runner(SourceScanner sourceScanner,
-            List<SecurityRule> securityRules,
-            FindingCollector collector,
-            ReportGenerator reportGenerator) {
-            this.sourceScanner = sourceScanner;
-            this.securityRules = securityRules;
-            this.collector = collector;
-            this.reportGenerator = reportGenerator;
-        }
+        AnalyzerConfig cfg = args.containsOption("config")
+                ? yaml.readValue(new File(args.getOptionValues("config").get(0)), AnalyzerConfig.class)
+                : new AnalyzerConfig();
 
-        @Override
-        public void run(String... args) throws Exception {
-            // 1) Parse --source, --report, and --config flags:
-            Map<String, String> opts = new HashMap<>();
-            List<String> pos = new ArrayList<>();
-            for (int i = 0; i < args.length; i++) {
-                switch (args[i]) {
-                    case "--source" -> opts.put("source", args[++i]);
-                    case "--report" -> opts.put("report", args[++i]);
-                    case "--config" -> opts.put("config", args[++i]);
-                    default -> {
-                        if (args[i].startsWith("--")) {
-                            System.err.println("Unknown flag: " + args[i]);
-                            return;
-                        }
-                        pos.add(args[i]);
-                    }
-                }
-            }
-            String sourceDir = opts.getOrDefault("source", pos.isEmpty()? null: pos.get(0));
-            if (sourceDir == null) {
-                System.err.println("Error: no source directory specified. Use --source <dir>");
-                return;
-            }
-            String reportFile = opts.getOrDefault("report", pos.size()>1? pos.get(1): "security-report.html");
-
-            // 2) Load config (if any):
-            AnalyzerConfig config = new AnalyzerConfig();
-            if (opts.containsKey("config")) {
-                ObjectMapper yaml = new ObjectMapper(new YAMLFactory());
-                config = yaml.readValue(new File(opts.get("config")), AnalyzerConfig.class);
-            }
-
-            // 3) Filter rules by config:
-            AnalyzerConfig finalConfig = config;
-            List<SecurityRule> toRun = securityRules.stream()
-                .filter(r -> finalConfig.isRuleEnabled(r.getId()))
+        List<SecurityRule> active = rules.stream()
+                .filter(r -> cfg.isRuleEnabled(r.getId()))
                 .collect(Collectors.toList());
 
-            // 4) Perform scan + report:
-            sourceScanner.scan(Paths.get(sourceDir), toRun, collector);
-            reportGenerator.generate(collector.getFindings(), Paths.get(reportFile));
+        scanner.scan(Paths.get(src), active, collector);
+        reportGen.generate(collector.getFindings(), Paths.get(report));
 
-            System.out.printf("Done: scanned %d rules, report at %s%n",
-                toRun.size(), reportFile);
+        System.out.printf("Gotowe: %d reguł, raport → %s%n", active.size(), report);
+    }
+
+    private static String firstOption(
+            ApplicationArguments args,
+            String name,
+            List<String> positionals,
+            String errorMsgIfMissing,
+            String defaultValue
+    ) {
+        if (args.containsOption(name)) {
+            return args.getOptionValues(name).get(0);
         }
+        int idx = "source".equals(name) ? 0 : 1;
+        if (positionals.size() > idx) {
+            return positionals.get(idx);
+        }
+        if (errorMsgIfMissing != null) {
+            System.err.println(errorMsgIfMissing);
+            System.exit(1);
+        }
+        return defaultValue;
+    }
+
+    private static String firstOption(
+            ApplicationArguments args,
+            String name,
+            List<String> positionals,
+            String errorMsgIfMissing
+    ) {
+        return firstOption(args, name, positionals, errorMsgIfMissing, null);
     }
 }
