@@ -17,7 +17,7 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 
 
 @SpringBootApplication
-public class JavaSecurityAnalyzerApplication implements CommandLineRunner {
+public class JavaSecurityAnalyzerApplication implements ApplicationRunner {
 
     private final SourceScanner scanner;
     private final List<SecurityRule> rules;
@@ -37,8 +37,6 @@ public class JavaSecurityAnalyzerApplication implements CommandLineRunner {
         this.reportGen = reportGen;
     }
 
-    private final ObjectMapper yaml = new ObjectMapper(new YAMLFactory());
-
     public static void main(String[] args) {
         new SpringApplicationBuilder(JavaSecurityAnalyzerApplication.class)
                 .web(WebApplicationType.NONE)
@@ -46,39 +44,51 @@ public class JavaSecurityAnalyzerApplication implements CommandLineRunner {
     }
 
     @Override
-    public void run(String... args) throws Exception {
-        // ----- 1) parsowanie argumentów -----
-        String sourcePath = null;
-        String reportPath = "security-report.html";
-        String configPath = null;
+    public void run(ApplicationArguments args) throws Exception {
+        String src   = firstOption(args, "source",  args.getNonOptionArgs(), "musisz podać --source");
+        String report= firstOption(args, "report", args.getNonOptionArgs(), null, "security-report.html");
 
-        for (int i = 0; i < args.length; i++) {
-            switch (args[i]) {
-                case "--source" -> sourcePath = args[++i];
-                case "--report" -> reportPath = args[++i];
-                case "--config" -> configPath = args[++i];
-            }
-        }
-        if (sourcePath == null) {
-            System.err.println("Błąd: musisz podać --source <katalog>");
-            System.exit(1);
-        }
-
-        // ----- 2) wczytanie konfiguracji (opcjonalnie) -----
-        AnalyzerConfig cfg = (configPath != null)
-                ? yaml.readValue(new File(configPath), AnalyzerConfig.class)
+        AnalyzerConfig cfg = args.containsOption("config")
+                ? yaml.readValue(new File(args.getOptionValues("config").get(0)), AnalyzerConfig.class)
                 : new AnalyzerConfig();
 
-        // ----- 3) wybór reguł -----
-        List<SecurityRule> activeRules = rules.stream()
+        List<SecurityRule> active = rules.stream()
                 .filter(r -> cfg.isRuleEnabled(r.getId()))
                 .collect(Collectors.toList());
 
-        // ----- 4) skanowanie i generowanie raportu -----
-        scanner.scan(Paths.get(sourcePath), activeRules, collector);
-        reportGen.generate(collector.getFindings(), Paths.get(reportPath));
+        scanner.scan(Paths.get(src), active, collector);
+        reportGen.generate(collector.getFindings(), Paths.get(report));
 
-        System.out.printf("Gotowe: uruchomiono %d reguł, raport → %s%n",
-                activeRules.size(), reportPath);
+        System.out.printf("Gotowe: %d reguł, raport → %s%n", active.size(), report);
+    }
+
+    private static String firstOption(
+            ApplicationArguments args,
+            String name,
+            List<String> positionals,
+            String errorMsgIfMissing,
+            String defaultValue
+    ) {
+        if (args.containsOption(name)) {
+            return args.getOptionValues(name).get(0);
+        }
+        int idx = "source".equals(name) ? 0 : 1;
+        if (positionals.size() > idx) {
+            return positionals.get(idx);
+        }
+        if (errorMsgIfMissing != null) {
+            System.err.println(errorMsgIfMissing);
+            System.exit(1);
+        }
+        return defaultValue;
+    }
+
+    private static String firstOption(
+            ApplicationArguments args,
+            String name,
+            List<String> positionals,
+            String errorMsgIfMissing
+    ) {
+        return firstOption(args, name, positionals, errorMsgIfMissing, null);
     }
 }
