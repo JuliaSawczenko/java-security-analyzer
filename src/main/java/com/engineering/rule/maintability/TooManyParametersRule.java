@@ -20,11 +20,16 @@ public class TooManyParametersRule implements SecurityRule {
     @Override
     public void apply(CompilationUnit cu, JavaParserFacade facade, FindingCollector collector) {
         cu.findAll(MethodDeclaration.class).stream()
-            .filter(m -> m.getParameters().size() > MAX_PARAMS)
-            .forEach(m -> collector.report(
-                this,
-                m,
-                String.format("Method '%s' has %d parameters (max=%d); consider refactoring into smaller methods",
-                    m.getName(), m.getParameters().size(), MAX_PARAMS)));
+                .filter(m -> m.getParameters().size() > MAX_PARAMS)
+                .forEach(m -> collector.report(
+                        this,
+                        m,
+                        String.format(
+                                "Metoda '%s' ma %d parametrów (maksymalnie %d) – rozważ podział na mniejsze metody",
+                                m.getName(),
+                                m.getParameters().size(),
+                                MAX_PARAMS
+                        )
+                ));
     }
 }

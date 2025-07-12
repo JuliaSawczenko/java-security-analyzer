@@ -19,7 +19,9 @@ public class InsecureDeserializationRule implements SecurityRule {
     @Override
     public void apply(CompilationUnit cu, JavaParserFacade facade, FindingCollector collector) {
         cu.findAll(MethodCallExpr.class).forEach(call -> {
-            if (!"readObject".equals(call.getNameAsString())) return;
+            if (!"readObject".equals(call.getNameAsString())) {
+                return;
+            }
             ResolvedMethodDeclaration decl;
             try {
                 decl = call.resolve();
@@ -27,8 +29,11 @@ public class InsecureDeserializationRule implements SecurityRule {
                 return;
             }
             if ("java.io.ObjectInputStream".equals(decl.declaringType().getQualifiedName())) {
-                collector.report(this, call,
-                    "Unvalidated deserialization via ObjectInputStream.readObject;");
+                collector.report(
+                        this,
+                        call,
+                        "Niezabezpieczona deserializacja: wywołanie ObjectInputStream.readObject() bez walidacji danych"
+                );
             }
         });
     }

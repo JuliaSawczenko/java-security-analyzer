@@ -29,8 +29,8 @@ public class JavaSecurityAnalyzerApplication {
 
     public static void main(String[] args) {
         new SpringApplicationBuilder(JavaSecurityAnalyzerApplication.class)
-            .web(WebApplicationType.NONE)
-            .run(args);
+                .web(WebApplicationType.NONE)
+                .run(args);
     }
 
     @Component
@@ -41,18 +41,18 @@ public class JavaSecurityAnalyzerApplication {
         private final ReportGenerator reportGenerator;
 
         public Runner(SourceScanner sourceScanner,
-            List<SecurityRule> securityRules,
-            FindingCollector collector,
-            ReportGenerator reportGenerator) {
-            this.sourceScanner = sourceScanner;
-            this.securityRules = securityRules;
-            this.collector = collector;
+                      List<SecurityRule> securityRules,
+                      FindingCollector collector,
+                      ReportGenerator reportGenerator) {
+            this.sourceScanner   = sourceScanner;
+            this.securityRules   = securityRules;
+            this.collector       = collector;
             this.reportGenerator = reportGenerator;
         }
 
         @Override
         public void run(String... args) throws Exception {
-            // 1) Parse --source, --report, and --config flags:
+            // 1) Parsowanie flag --source, --report i --config
             Map<String, String> opts = new HashMap<>();
             List<String> pos = new ArrayList<>();
             for (int i = 0; i < args.length; i++) {
@@ -62,39 +62,42 @@ public class JavaSecurityAnalyzerApplication {
                     case "--config" -> opts.put("config", args[++i]);
                     default -> {
                         if (args[i].startsWith("--")) {
-                            System.err.println("Unknown flag: " + args[i]);
+                            System.err.println("Nieznana flaga: " + args[i]);
                             return;
                         }
                         pos.add(args[i]);
                     }
                 }
             }
-            String sourceDir = opts.getOrDefault("source", pos.isEmpty()? null: pos.get(0));
+
+            String sourceDir = opts.getOrDefault("source", pos.isEmpty() ? null : pos.get(0));
             if (sourceDir == null) {
-                System.err.println("Error: no source directory specified. Use --source <dir>");
+                System.err.println("Błąd: nie podano katalogu źródłowego. Użyj --source <katalog>");
                 return;
             }
-            String reportFile = opts.getOrDefault("report", pos.size()>1? pos.get(1): "security-report.html");
+            String reportFile = opts.getOrDefault("report", pos.size() > 1 ? pos.get(1) : "security-report.html");
 
-            // 2) Load config (if any):
+            // 2) Wczytanie konfiguracji (opcjonalnie)
             AnalyzerConfig config = new AnalyzerConfig();
             if (opts.containsKey("config")) {
                 ObjectMapper yaml = new ObjectMapper(new YAMLFactory());
                 config = yaml.readValue(new File(opts.get("config")), AnalyzerConfig.class);
             }
 
-            // 3) Filter rules by config:
+            // 3) Filtrowanie reguł zgodnie z konfiguracją
             AnalyzerConfig finalConfig = config;
             List<SecurityRule> toRun = securityRules.stream()
-                .filter(r -> finalConfig.isRuleEnabled(r.getId()))
-                .collect(Collectors.toList());
+                    .filter(r -> finalConfig.isRuleEnabled(r.getId()))
+                    .collect(Collectors.toList());
 
-            // 4) Perform scan + report:
+            // 4) Skanowanie i generowanie raportu
             sourceScanner.scan(Paths.get(sourceDir), toRun, collector);
             reportGenerator.generate(collector.getFindings(), Paths.get(reportFile));
 
-            System.out.printf("Done: scanned %d rules, report at %s%n",
-                toRun.size(), reportFile);
+            System.out.printf(
+                    "Gotowe: sprawdzono %d reguł, raport zapisano w %s%n",
+                    toRun.size(), reportFile
+            );
         }
     }
 }

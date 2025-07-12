@@ -19,11 +19,16 @@ public class MagicNumberRule implements SecurityRule {
     public void apply(CompilationUnit cu, JavaParserFacade facade, FindingCollector collector) {
         cu.findAll(IntegerLiteralExpr.class).forEach(lit -> {
             String val = lit.getValue();
+            // pomijamy uniwersalne literały
             if (!val.equals("0") && !val.equals("1") && !val.equals("-1")) {
                 collector.report(
-                    this,
-                    lit,
-                    "Magic number '" + val + "' detected; consider replacing with a named constant");
+                        this,
+                        lit,
+                        String.format(
+                                "Wykryto magiczną liczbę '%s'; rozważ zastąpienie stałą o opisowej nazwie",
+                                val
+                        )
+                );
             }
         });
     }

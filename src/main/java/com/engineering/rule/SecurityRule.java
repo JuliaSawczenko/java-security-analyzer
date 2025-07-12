@@ -4,18 +4,25 @@ import com.engineering.model.FindingCollector;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade;
 
+/**
+ * Reprezentuje pojedynczą regułę analizy AST.
+ */
 public interface SecurityRule {
+
     /**
-     * Unique identifier for the rule, e.g. "SEC_SQL_INJECTION".
+     * Zwraca unikalny identyfikator reguły, np. "SEC_SQL_INJECTION".
+     *
+     * @return identyfikator reguły
      */
     String getId();
 
     /**
-     * Applies this rule to the given AST, reporting any issues to the collector.
+     * Stosuje tę regułę do przekazanego drzewa składniowego (AST),
+     * zgłaszając wykryte problemy do kolektora.
      *
-     * @param cu        the parsed CompilationUnit (AST root)
-     * @param facade    the JavaParserFacade for type resolution
-     * @param collector where to report findings
+     * @param cu        przeparsowany CompilationUnit (korzeń AST)
+     * @param facade    JavaParserFacade służący do rozwiązywania typów
+     * @param collector kolektor, do którego trafiają zgłoszone problemy
      */
     void apply(CompilationUnit cu, JavaParserFacade facade, FindingCollector collector);
 }

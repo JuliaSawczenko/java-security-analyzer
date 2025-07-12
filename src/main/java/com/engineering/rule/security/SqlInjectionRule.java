@@ -20,7 +20,6 @@ import org.springframework.stereotype.Component;
 public class SqlInjectionRule implements SecurityRule {
 
     private static final Set<String> SQL_METHODS;
-
     static {
         SQL_METHODS = new HashSet<>();
         SQL_METHODS.add("execute");
@@ -31,7 +30,6 @@ public class SqlInjectionRule implements SecurityRule {
     }
 
     private static final Set<String> SQL_TYPES;
-
     static {
         SQL_TYPES = new HashSet<>();
         SQL_TYPES.add("java.sql.Statement");
@@ -65,32 +63,45 @@ public class SqlInjectionRule implements SecurityRule {
 
             for (Expression arg : call.getArguments()) {
                 if (isStringConcat(arg)) {
-                    collector.report(this, call,
-                        "Potential SQL Injection: concatenated SQL passed directly into " + methodName);
+                    collector.report(
+                            this,
+                            call,
+                            String.format(
+                                    "Możliwe ryzyko SQL Injection: konkatenacja ciągu SQL przekazana bezpośrednio do %s()",
+                                    methodName
+                            )
+                    );
                 }
                 else if (arg instanceof NameExpr nameExpr) {
                     String varName = nameExpr.getNameAsString();
                     findVariableInitializer(cu, varName)
-                        .filter(this::isStringConcat)
-                        .forEach(init -> collector.report(this, call,
-                            "Potential SQL Injection: variable '" + varName +
-                                "' was built via string concatenation before calling " + methodName));
+                            .filter(this::isStringConcat)
+                            .forEach(init -> collector.report(
+                                    this,
+                                    call,
+                                    String.format(
+                                            "Możliwe ryzyko SQL Injection: zmienna '%s' zbudowana przez konkatenację przed wywołaniem %s()",
+                                            varName, methodName
+                                    )
+                            ));
                 }
             }
         });
     }
 
-    /** Checks for a String concatenation via '+'. */
+    /** Sprawdza, czy wyrażenie to konkatenacja Stringów poprzez '+' */
     private boolean isStringConcat(Expression expr) {
         return expr instanceof BinaryExpr bin
-            && bin.getOperator() == BinaryExpr.Operator.PLUS;
+                && bin.getOperator() == BinaryExpr.Operator.PLUS;
     }
 
-    /** Looks up declared variables in this CU matching `varName`. */
+    /** Znajduje inicjalizator zmiennej o podanej nazwie w całym CU */
     private Stream<Expression> findVariableInitializer(CompilationUnit cu, String varName) {
         return cu.findAll(VariableDeclarator.class).stream()
-            .filter(vd -> vd.getNameAsString().equals(varName))
-            .map(VariableDeclarator::getInitializer)
-            .flatMap(Optional::stream);
+                .filter(vd -> vd.getNameAsString().equals(varName))
+                .map(VariableDeclarator::getInitializer)
+                .flatMap(Optional::stream);
     }
 }
+
+

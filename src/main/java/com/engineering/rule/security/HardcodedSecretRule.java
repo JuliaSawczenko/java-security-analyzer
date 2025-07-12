@@ -12,7 +12,9 @@ import org.springframework.stereotype.Component;
 public class HardcodedSecretRule implements SecurityRule {
 
     private static final Set<String> KEYWORDS = Set.of(
-        "password", "passwd", "pwd", "secret", "apikey", "api_key", "token", "accesskey", "secretkey"
+            "password", "passwd", "pwd", "secret", "hasło", "klucz",
+            "apikey", "api_key", "token", "key",
+            "accesskey", "secretkey"
     );
 
     @Override
@@ -25,13 +27,19 @@ public class HardcodedSecretRule implements SecurityRule {
         cu.findAll(VariableDeclarator.class).forEach(vd -> {
             if (!vd.getType().isClassOrInterfaceType()) return;
             if (!vd.getType().asString().equals("String")) return;
+
             vd.getInitializer().ifPresent(init -> {
                 if (init.isStringLiteralExpr()) {
-                    String name = vd.getNameAsString().toLowerCase();
-                    if (KEYWORDS.stream().anyMatch(name::contains)) {
-                        collector.report(this, vd,
-                            "Hard-coded secret in variable '"+ vd.getName() +
-                                "'; consider externalizing to a secure vault");
+                    String varName = vd.getNameAsString().toLowerCase();
+                    if (KEYWORDS.stream().anyMatch(varName::contains)) {
+                        collector.report(
+                                this,
+                                vd,
+                                String.format(
+                                        "W zmiennej '%s' wykryto hardcoded sekret; rozważ przeniesienie go do 'secure vault'",
+                                        vd.getNameAsString()
+                                )
+                        );
                     }
                 }
             });

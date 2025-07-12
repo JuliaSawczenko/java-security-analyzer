@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 public class WeakCryptoRule implements SecurityRule {
 
     private static final Set<String> WEAK = Set.of(
-        "MD5", "SHA-1", "DES", "DES/ECB", "DESede", "RC4", "AES/ECB"
+            "MD5", "SHA-1", "DES", "DES/ECB", "DESede", "RC4", "AES/ECB"
     );
 
     @Override
@@ -25,7 +25,9 @@ public class WeakCryptoRule implements SecurityRule {
     @Override
     public void apply(CompilationUnit cu, JavaParserFacade facade, FindingCollector collector) {
         cu.findAll(MethodCallExpr.class).forEach(call -> {
-            if (!"getInstance".equals(call.getNameAsString())) return;
+            if (!"getInstance".equals(call.getNameAsString())) {
+                return;
+            }
             ResolvedMethodDeclaration decl;
             try {
                 decl = call.resolve();
@@ -33,23 +35,27 @@ public class WeakCryptoRule implements SecurityRule {
                 return;
             }
             String cls = decl.declaringType().getQualifiedName();
-            // target MessageDigest.getInstance(...) and Cipher.getInstance(...)
             if (!cls.equals("java.security.MessageDigest") && !cls.equals("javax.crypto.Cipher")) {
                 return;
             }
             call.getArguments().stream()
-                .filter(StringLiteralExpr.class::isInstance)
-                .map(StringLiteralExpr.class::cast)
-                .map(StringLiteralExpr::getValue)
-                .map(String::toUpperCase)
-                .forEach(alg -> {
-                    WEAK.stream()
-                        .filter(alg::contains)
-                        .findFirst()
-                        .ifPresent(bad -> collector.report(this, call,
-                            "Weak algorithm '"+ alg +"' used in "+ cls +
-                                "; consider SHA-256/AES/GCM instead"));
-                });
+                    .filter(StringLiteralExpr.class::isInstance)
+                    .map(StringLiteralExpr.class::cast)
+                    .map(StringLiteralExpr::getValue)
+                    .map(String::toUpperCase)
+                    .forEach(alg -> {
+                        WEAK.stream()
+                                .filter(alg::contains)
+                                .findFirst()
+                                .ifPresent(bad -> collector.report(
+                                        this,
+                                        call,
+                                        String.format(
+                                                "Wykryto użycie słabego algorytmu '%s' w %s; rozważ użycie SHA-256 lub AES/GCM",
+                                                alg, cls
+                                        )
+                                ));
+                    });
         });
     }
 }

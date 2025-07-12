@@ -24,10 +24,13 @@ public class LongMethodRule implements SecurityRule {
             int count = m.findAll(Statement.class).size();
             if (count > MAX_STATEMENTS) {
                 collector.report(
-                    this,
-                    m,
-                    String.format("Method '%s' has %d statements (max=%d); consider breaking it up",
-                        m.getName(), count, MAX_STATEMENTS));
+                        this,
+                        m,
+                        String.format(
+                                "Metoda '%s' zawiera %d instrukcji (maksymalnie %d) – rozważ rozbicie jej na mniejsze części",
+                                m.getName(), count, MAX_STATEMENTS
+                        )
+                );
             }
         });
     }

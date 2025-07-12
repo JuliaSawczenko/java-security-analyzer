@@ -19,12 +19,17 @@ public class InsecureRandomRule implements SecurityRule {
     public void apply(CompilationUnit cu, JavaParserFacade facade, FindingCollector collector) {
         cu.findAll(ObjectCreationExpr.class).forEach(oce -> {
             try {
-                var type = facade.getType(oce).describe();
+                String type = facade.getType(oce).describe();
                 if ("java.util.Random".equals(type)) {
-                    collector.report(this, oce,
-                        "Use of insecure Random; prefer java.security.SecureRandom");
+                    collector.report(
+                            this,
+                            oce,
+                            "Wykryto użycie niezabezpieczonego java.util.Random; zaleca się użycie java.security.SecureRandom"
+                    );
                 }
-            } catch (Exception ignored) { }
+            } catch (Exception ignored) {
+                // jeśli nie uda się rozwiązać typu, pomijamy
+            }
         });
     }
 }

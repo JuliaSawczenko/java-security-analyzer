@@ -4,13 +4,17 @@ import com.engineering.model.Finding;
 import java.nio.file.Path;
 import java.util.List;
 
+/**
+ * Generuje raport na podstawie zebranych problemów i zapisuje go do wskazanej ścieżki.
+ */
 public interface ReportGenerator {
+
     /**
-     * Generates a report for the given findings and writes it to the specified output path.
+     * Tworzy raport dla przekazanej listy problemów i zapisuje go do pliku.
      *
-     * @param findings the list of findings to include in the report
-     * @param output   the path to write the report file (e.g., HTML)
-     * @throws Exception if an error occurs while writing the report
+     * @param findings lista problemów do uwzględnienia w raporcie
+     * @param output   ścieżka, pod którą ma zostać zapisany raport (np. plik HTML)
+     * @throws Exception w razie błędów podczas zapisu raportu
      */
     void generate(List<Finding> findings, Path output) throws Exception;
 }

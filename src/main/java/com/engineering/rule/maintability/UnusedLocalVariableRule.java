@@ -16,20 +16,24 @@ public class UnusedLocalVariableRule implements SecurityRule {
     public String getId() {
         return "MNT_UNUSED_LOCAL";
     }
-    
+
     @Override
     public void apply(CompilationUnit cu, JavaParserFacade facade, FindingCollector collector) {
-        cu.findAll(MethodDeclaration.class).forEach(m -> {
-            m.findAll(VariableDeclarator.class).forEach(vd -> {
-                String varName = vd.getNameAsString();
-                long refs = m.findAll(NameExpr.class).stream()
-                    .filter(ne -> ne.getNameAsString().equals(varName))
-                    .count();
-                if (refs <= 1) {
+        cu.findAll(MethodDeclaration.class).forEach(method -> {
+            method.findAll(VariableDeclarator.class).forEach(varDecl -> {
+                String name = varDecl.getNameAsString();
+                long occurrences = method.findAll(NameExpr.class).stream()
+                        .filter(ne -> ne.getNameAsString().equals(name))
+                        .count();
+                if (occurrences <= 1) {
                     collector.report(
-                        this,
-                        vd,
-                        "Local variable '" + varName + "' is never used; consider removing it");
+                            this,
+                            varDecl,
+                            String.format(
+                                    "Zmienna lokalna '%s' nie jest używana; rozważ jej usunięcie",
+                                    name
+                            )
+                    );
                 }
             });
         });
