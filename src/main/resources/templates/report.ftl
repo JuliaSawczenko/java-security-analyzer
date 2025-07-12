@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <title>Security Analysis Report</title>
+  <title>Raport Analizy Bezpieczeństwa</title>
   <style>
     /* Global reset */
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -81,24 +81,24 @@
 </head>
 <body>
 <div class="header">
-  <h1>Security Analysis Report</h1>
+  <h1>Raport Analizy Bezpieczeństwa</h1>
 </div>
 <div class="container">
   <div class="summary">
       <#if findings?size == 0>
-        <p class="no-issues">✔ No security issues detected.</p>
+        <p class="no-issues">✔ Nie wykryto żadnych problemów bezpieczeństwa.</p>
       <#else>
-        <p>Total issues found: <span>${findings?size}</span></p>
+        <p>Liczba wykrytych problemów: <span>${findings?size}</span></p>
       </#if>
-    <p>Generated on ${.now?string("yyyy-MM-dd HH:mm:ss")}</p>
+    <p>Wygenerowano: ${.now?string("yyyy-MM-dd HH:mm:ss")}</p>
   </div>
   <table>
     <thead>
     <tr>
-      <th>Rule ID</th>
-      <th>File</th>
-      <th>Line</th>
-      <th>Message</th>
+      <th>Identyfikator</th>
+      <th>Plik</th>
+      <th>Linia</th>
+      <th>Opis</th>
     </tr>
     </thead>
     <tbody>
